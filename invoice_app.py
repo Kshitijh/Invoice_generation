@@ -269,10 +269,10 @@ class InvoiceGeneratorApp:
         fill_header = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
 
         # --- Invoice Header (Your Company Details) ---
-        ws['A1'] = "YOUR COMPANY NAME"
+        ws['A1'] = "Anant Enterprises"
         ws['A1'].font = heading_font
-        ws['A2'] = "Your Company Address, City, State"
-        ws['A3'] = "GSTIN: Your GST No. (Edit this in the code)"
+        ws['A2'] = "18/560, New industrial estate, Ichalkaranji Opp. ASC College, Kolhapur, Maharashtra, 416115"
+        ws['A3'] = "GSTIN: 27FQLPP6106G1ZK"
         
         # --- Buyer Details ---
         ws['A5'] = "BILL TO:"
