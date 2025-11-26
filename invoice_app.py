@@ -2,15 +2,16 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import openpyxl
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
-from datetime import date
+from datetime import date, datetime
+from tkcalendar import DateEntry
 import os
 
 # --- Simulated Database for Saved Parties (from previous script) ---
 SAVED_PARTIES = {
-    "PRIME_TECH": {
-        "name": "Prime Technology Solutions Pvt. Ltd.",
+    "Koustubh Enterprise": {
+        "name": "Koustubh's Solars Pvt. Ltd.",
         "gst": "27AABBCC1234Z5",
-        "address": "101, Innovator's Hub, Pune, Maharashtra",
+        "address": "Ichalkaranji, Maharashtra",
     },
     "ALPHA_TRADING": {
         "name": "Alpha Trading Co.",
@@ -74,23 +75,25 @@ class InvoiceGeneratorApp:
             entry.grid(row=row_num, column=1, padx=5, pady=2, sticky="ew")
             self.buyer_entries[key] = entry
 
-        # 3. Date Fields
+        # 3. Date Fields with Calendar
         self.date_entries = {}
         date_fields = [
-            ("Sale Date (YYYY-MM-DD)", "sale_date", 1), 
-            ("Delivery Date (YYYY-MM-DD)", "delivery_date", 2)
+            ("Sale Date", "sale_date", 1), 
+            ("Delivery Date", "delivery_date", 2)
         ]
         
         # Default dates
-        default_sale_date = str(date.today())
+        default_sale_date = date.today()
         
         for i, (label_text, key, row_num) in enumerate(date_fields):
             ttk.Label(frame, text=f"{label_text}:").grid(row=row_num, column=2, padx=5, pady=2, sticky="w")
-            entry = ttk.Entry(frame)
-            entry.grid(row=row_num, column=3, padx=5, pady=2, sticky="ew")
-            self.date_entries[key] = entry
+            date_entry = DateEntry(frame, width=18, background='darkblue',
+                                  foreground='white', borderwidth=2, 
+                                  date_pattern='dd-mm-yyyy')
+            date_entry.grid(row=row_num, column=3, padx=5, pady=2, sticky="ew")
+            self.date_entries[key] = date_entry
             if key == "sale_date":
-                entry.insert(0, default_sale_date)
+                date_entry.set_date(default_sale_date)
 
     def _load_saved_party(self, event):
         """Loads details from SAVED_PARTIES into entry fields."""
@@ -126,10 +129,8 @@ class InvoiceGeneratorApp:
             ttk.Label(entry_frame, text=label_text).grid(row=0, column=i * 2, padx=5, sticky="w")
             entry = ttk.Entry(entry_frame, width=20 if key != "description" else 40)
             entry.grid(row=0, column=i * 2 + 1, padx=5, sticky="w")
+            entry.bind("<Return>", lambda event: self._add_item())
             self.item_entries[key] = entry
-        
-        # Add button right after the Rate field
-        ttk.Button(entry_frame, text="Add", command=self._add_item).grid(row=0, column=6, padx=10, sticky="w")
 
         # 2. Treeview for displaying added items
         self.tree = ttk.Treeview(frame, columns=("Qty", "Rate", "Total"), show="headings", height=10)
@@ -213,9 +214,9 @@ class InvoiceGeneratorApp:
             key: entry.get().strip() for key, entry in self.buyer_entries.items()
         }
         
-        # 2. General Invoice Data
+        # 2. General Invoice Data - Format dates as DD-MM-YYYY
         invoice_details = {
-            key: entry.get().strip() for key, entry in self.date_entries.items()
+            key: entry.get_date().strftime('%d-%m-%Y') for key, entry in self.date_entries.items()
         }
         
         # 3. Items Data
