@@ -323,21 +323,8 @@ Potential features for future versions:
 - Payment terms section
 - Digital signature support
 
-## 📞 Support
-
-For issues or questions:
-- Create an issue on GitHub
-- Check existing issues for solutions
-- Review this README thoroughly
-
 ## 📄 License
 
 This project is open-source and available for personal and commercial use.
-
----
-
-**Version**: 1.0.0  
-**Last Updated**: November 26, 2025  
-**Author**: Kshitijh  
 
 **Happy Invoicing! 🎉**
