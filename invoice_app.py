@@ -6,19 +6,85 @@ from datetime import date, datetime
 from tkcalendar import DateEntry
 import os
 
-# --- Simulated Database for Saved Parties (from previous script) ---
-SAVED_PARTIES = {
-    "Koustubh Enterprise": {
-        "name": "Koustubh's Solars Pvt. Ltd.",
-        "gst": "27AABBCC1234Z5",
-        "address": "Ichalkaranji, Maharashtra",
-    },
-    "ALPHA_TRADING": {
-        "name": "Alpha Trading Co.",
-        "gst": "09XXYZ1234A1Z9",
-        "address": "B-5, Industrial Estate, New Delhi, Delhi",
-    },
-}
+# --- Load Customers from Excel File ---
+def load_customers_from_excel(file_path="customer_data.xlsx"):
+    """Loads customer data from an Excel file."""
+    customers = {}
+    try:
+        if not os.path.exists(file_path):
+            messagebox.showwarning("customer_data.xlsx Not Found, Create a new file named customer_data.xlsx", 
+                f"Customer database file '{file_path}' not found.\nUsing empty customer list.")
+            return customers
+            
+        wb = openpyxl.load_workbook(file_path)
+        ws = wb.active
+        
+        # Read data starting from row 2 (skip header)
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if row[0]:  # Check if Customer Key exists
+                customer_key = row[0]
+                customers[customer_key] = {
+                    "name": row[1] if row[1] else "",
+                    "gst": row[2] if row[2] else "",
+                    "address": row[3] if row[3] else "",
+                }
+        wb.close()
+    except Exception as e:
+        messagebox.showerror("Error Loading Customers", 
+            f"Failed to load customer data from '{file_path}'.\nError: {e}")
+    
+    return customers
+
+def save_customer_to_excel(customer_key, customer_data, file_path="customer_data.xlsx"):
+    """Saves a new customer to the Excel file."""
+    try:
+        if not os.path.exists(file_path):
+            # Create new file with headers if it doesn't exist
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Customers"
+            
+            # Create headers
+            headers = ["Customer Key", "Customer Name", "GST Number", "Address"]
+            header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+            header_font = Font(name='Calibri', size=11, bold=True, color="FFFFFF")
+            
+            for col, header in enumerate(headers, start=1):
+                cell = ws.cell(row=1, column=col)
+                cell.value = header
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+            
+            # Set column widths
+            ws.column_dimensions['A'].width = 25
+            ws.column_dimensions['B'].width = 35
+            ws.column_dimensions['C'].width = 20
+            ws.column_dimensions['D'].width = 45
+        else:
+            wb = openpyxl.load_workbook(file_path)
+            ws = wb.active
+        
+        # Find the next empty row
+        next_row = ws.max_row + 1
+        
+        # Add the new customer data
+        ws.cell(row=next_row, column=1, value=customer_key)
+        ws.cell(row=next_row, column=2, value=customer_data.get("name", ""))
+        ws.cell(row=next_row, column=3, value=customer_data.get("gst", ""))
+        ws.cell(row=next_row, column=4, value=customer_data.get("address", ""))
+        
+        # Save the workbook
+        wb.save(file_path)
+        wb.close()
+        return True
+    except Exception as e:
+        messagebox.showerror("Error Saving Customer", 
+            f"Failed to save customer data to '{file_path}'.\nError: {e}")
+        return False
+
+# Load customers at startup
+SAVED_PARTIES = load_customers_from_excel()
 
 class InvoiceGeneratorApp:
     def __init__(self, master):
@@ -245,6 +311,27 @@ class InvoiceGeneratorApp:
             return
             
         try:
+            # Check if this is a new party and save it
+            party_name = data["party"]["name"]
+            is_new_party = self.party_var.get() == "(New Party)"
+            
+            if is_new_party and party_name:
+                # Generate customer key from name
+                customer_key = party_name.split()[0].upper().replace(".", "").replace(",", "")
+                
+                # Check if customer already exists
+                global SAVED_PARTIES
+                if customer_key not in SAVED_PARTIES:
+                    # Save to Excel
+                    if save_customer_to_excel(customer_key, data["party"]):
+                        # Reload customers
+                        SAVED_PARTIES = load_customers_from_excel()
+                        # Update dropdown values
+                        party_keys = ["(New Party)"] + list(SAVED_PARTIES.keys())
+                        self.party_dropdown['values'] = party_keys
+                        messagebox.showinfo("Customer Saved", 
+                            f"New customer '{party_name}' has been saved to the database.")
+            
             # Call the Excel generation function
             filename = self._generate_invoice_excel(data["party"], data["invoice"], data["items"])
             messagebox.showinfo("Success!", f"Invoice successfully generated as:\n**{filename}**\n\nFile saved in the current directory.")
