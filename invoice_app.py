@@ -409,12 +409,12 @@ class InvoiceGeneratorApp:
         ws['A10'] = f"Email: {party_details.get('email', '')}"
 
         # --- Date Details ---
-        ws['H5'] = "INVOICE DATE:"
-        ws['H5'].font = header_font
-        ws['I5'] = invoice_details['sale_date']
-        ws['H6'] = "DELIVERY DATE:"
-        ws['H6'].font = header_font
-        ws['I6'] = invoice_details['delivery_date']
+        ws['G5'] = "INVOICE DATE:"
+        ws['G5'].font = header_font
+        ws['H5'] = invoice_details['sale_date']
+        ws['G6'] = "DELIVERY DATE:"
+        ws['G6'].font = header_font
+        ws['H6'] = invoice_details['delivery_date']
         
         # --- Table Headers (Row 10) ---
         headers = ["#", "Description of Goods", "Quantity", "Rate", "GST %", "Total (Incl. Tax)"]
@@ -432,7 +432,7 @@ class InvoiceGeneratorApp:
                 col_start += 1
 
         # --- Table Data ---
-        row = 13
+        row = 11
         total_invoice_amount = 0
 
         for i, item in enumerate(items):
@@ -467,14 +467,12 @@ class InvoiceGeneratorApp:
 
         # --- Column Widths for readability ---
         ws.column_dimensions['A'].width = 5
-        ws.column_dimensions['B'].width = 25
-        ws.column_dimensions['C'].width = 1
+        ws.column_dimensions['B'].width = 30
+        ws.column_dimensions['C'].width = 0
         ws.column_dimensions['D'].width = 12
         ws.column_dimensions['E'].width = 15
-        ws.column_dimensions['F'].width = 10
-        ws.column_dimensions['G'].width = 15
-        ws.column_dimensions['H'].width = 18
-        ws.column_dimensions['I'].width = 18
+        ws.column_dimensions['F'].width = 12
+        ws.column_dimensions['G'].width = 18
 
         # --- Save the file ---
         # Ensure the filename is safe and unique
