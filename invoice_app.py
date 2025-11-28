@@ -27,6 +27,8 @@ def load_customers_from_excel(file_path="customer_data.xlsx"):
                     "name": row[1] if row[1] else "",
                     "gst": row[2] if row[2] else "",
                     "address": row[3] if row[3] else "",
+                    "phone": row[4] if len(row) > 4 and row[4] else "",
+                    "email": row[5] if len(row) > 5 and row[5] else "",
                 }
         wb.close()
     except Exception as e:
@@ -43,37 +45,41 @@ def save_customer_to_excel(customer_key, customer_data, file_path="customer_data
             wb = openpyxl.Workbook()
             ws = wb.active
             ws.title = "Customers"
-            
+
             # Create headers
-            headers = ["Customer Key", "Customer Name", "GST Number", "Address"]
+            headers = ["Customer Key", "Customer Name", "GST Number", "Address", "Phone", "Email"]
             header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
             header_font = Font(name='Calibri', size=11, bold=True, color="FFFFFF")
-            
+
             for col, header in enumerate(headers, start=1):
                 cell = ws.cell(row=1, column=col)
                 cell.value = header
                 cell.fill = header_fill
                 cell.font = header_font
                 cell.alignment = Alignment(horizontal='center', vertical='center')
-            
+
             # Set column widths
             ws.column_dimensions['A'].width = 25
             ws.column_dimensions['B'].width = 35
             ws.column_dimensions['C'].width = 20
             ws.column_dimensions['D'].width = 45
+            ws.column_dimensions['E'].width = 18
+            ws.column_dimensions['F'].width = 28
         else:
             wb = openpyxl.load_workbook(file_path)
             ws = wb.active
-        
+
         # Find the next empty row
         next_row = ws.max_row + 1
-        
+
         # Add the new customer data
         ws.cell(row=next_row, column=1, value=customer_key)
         ws.cell(row=next_row, column=2, value=customer_data.get("name", ""))
         ws.cell(row=next_row, column=3, value=customer_data.get("gst", ""))
         ws.cell(row=next_row, column=4, value=customer_data.get("address", ""))
-        
+        ws.cell(row=next_row, column=5, value=customer_data.get("phone", ""))
+        ws.cell(row=next_row, column=6, value=customer_data.get("email", ""))
+
         # Save the workbook
         wb.save(file_path)
         wb.close()
@@ -132,9 +138,11 @@ class InvoiceGeneratorApp:
         fields = [
             ("Buyer's Name", "name", 1), 
             ("GST No.", "gst", 2), 
-            ("Party's Address", "address", 3)
+            ("Party's Address", "address", 3),
+            ("Customer Phone", "phone", 4),
+            ("Customer Email", "email", 5)
         ]
-        
+
         for i, (label_text, key, row_num) in enumerate(fields):
             ttk.Label(frame, text=f"{label_text}:").grid(row=row_num, column=0, padx=5, pady=2, sticky="w")
             entry = ttk.Entry(frame)
@@ -183,31 +191,56 @@ class InvoiceGeneratorApp:
         # 1. Item Entry fields
         entry_frame = ttk.Frame(frame)
         entry_frame.pack(fill="x", padx=5, pady=5)
-        
+
+        # Make columns responsive
+        for i in range(8):
+            entry_frame.columnconfigure(i, weight=1)
+
         self.item_entries = {}
-        fields = [
-            ("Description", "description"), 
-            ("Quantity", "quantity"), 
-            ("Rate (Incl. Tax)", "rate")
-        ]
-        
-        for i, (label_text, key) in enumerate(fields):
-            ttk.Label(entry_frame, text=label_text).grid(row=0, column=i * 2, padx=5, sticky="w")
-            entry = ttk.Entry(entry_frame, width=20 if key != "description" else 40)
-            entry.grid(row=0, column=i * 2 + 1, padx=5, sticky="w")
-            entry.bind("<Return>", lambda event: self._add_item())
-            self.item_entries[key] = entry
+
+        # Description
+        ttk.Label(entry_frame, text="Description").grid(row=0, column=0, padx=5, sticky="ew")
+        desc_entry = ttk.Entry(entry_frame)
+        desc_entry.grid(row=0, column=1, padx=5, sticky="ew")
+        desc_entry.bind("<Return>", lambda event: self._add_item())
+        self.item_entries["description"] = desc_entry
+
+        # Quantity
+        ttk.Label(entry_frame, text="Quantity").grid(row=0, column=2, padx=5, sticky="ew")
+        qty_entry = ttk.Entry(entry_frame)
+        qty_entry.grid(row=0, column=3, padx=5, sticky="ew")
+        qty_entry.bind("<Return>", lambda event: self._add_item())
+        self.item_entries["quantity"] = qty_entry
+
+        # Rate
+        ttk.Label(entry_frame, text="Rate (Incl. Tax)").grid(row=0, column=4, padx=5, sticky="ew")
+        rate_entry = ttk.Entry(entry_frame)
+        rate_entry.grid(row=0, column=5, padx=5, sticky="ew")
+        rate_entry.bind("<Return>", lambda event: self._add_item())
+        self.item_entries["rate"] = rate_entry
+
+        # GST (%)
+        ttk.Label(entry_frame, text="GST (%)").grid(row=0, column=6, padx=5, sticky="ew")
+        gst_frame = ttk.Frame(entry_frame)
+        gst_frame.grid(row=0, column=7, padx=5, sticky="ew")
+        gst_entry = ttk.Entry(gst_frame)
+        gst_entry.pack(side="left", fill="x", expand=True)
+        gst_entry.bind("<Return>", lambda event: self._add_item())
+        self.item_entries["gst"] = gst_entry
+        ttk.Label(gst_frame, text="%").pack(side="left")
 
         # 2. Treeview for displaying added items
-        self.tree = ttk.Treeview(frame, columns=("Qty", "Rate", "Total"), show="headings", height=10)
-        self.tree.heading("#0", text="Description of Goods")
-        self.tree.column("#0", width=300, anchor="w")
+        self.tree = ttk.Treeview(frame, columns=("Description", "Qty", "Rate", "GST%", "Total"), show="headings", height=10)
+        self.tree.heading("Description", text="Description")
+        self.tree.column("Description", width=200, anchor="w")
         self.tree.heading("Qty", text="Quantity")
-        self.tree.column("Qty", width=100, anchor="center")
+        self.tree.column("Qty", width=80, anchor="center")
         self.tree.heading("Rate", text="Rate (Incl. Tax)")
-        self.tree.column("Rate", width=150, anchor="e")
+        self.tree.column("Rate", width=100, anchor="e")
+        self.tree.heading("GST%", text="GST %")
+        self.tree.column("GST%", width=80, anchor="center")
         self.tree.heading("Total", text="Total Amount")
-        self.tree.column("Total", width=150, anchor="e")
+        self.tree.column("Total", width=120, anchor="e")
         self.tree.pack(fill="both", padx=5, pady=5, expand=True)
 
         # Buttons frame at the bottom
@@ -223,35 +256,40 @@ class InvoiceGeneratorApp:
             description = self.item_entries["description"].get().strip()
             quantity = float(self.item_entries["quantity"].get())
             rate = float(self.item_entries["rate"].get())
-            
-            if not description or quantity <= 0 or rate <= 0:
-                messagebox.showerror("Input Error", "All fields must be filled, and Quantity/Rate must be positive numbers.")
+            gst = self.item_entries["gst"].get().strip()
+            gst_percent = float(gst) if gst else 0.0
+
+            if not description or quantity <= 0 or rate <= 0 or gst_percent < 0:
+                messagebox.showerror("Input Error", "All fields must be filled, and Quantity/Rate/GST must be valid positive numbers.")
                 return
 
             total_amount = quantity * rate
-            
+
             item = {
                 "description": description,
                 "quantity": quantity,
                 "rate": rate,
+                "gst": gst_percent,
                 "total": total_amount,
             }
             self.items_data.append(item)
-            
+
             # Insert into Treeview
-            self.tree.insert("", "end", text=description, values=(
-                f"{quantity:.2f}", 
-                f"{rate:.2f}", 
+            self.tree.insert("", "end", values=(
+                description,
+                f"{quantity:.2f}",
+                f"{rate:.2f}",
+                f"{gst_percent:.2f}",
                 f"{total_amount:.2f}"
             ))
-            
+
             # Clear fields after adding
             for key in self.item_entries:
                 self.item_entries[key].delete(0, tk.END)
             self.item_entries["description"].focus()
-            
+
         except ValueError:
-            messagebox.showerror("Input Error", "Quantity and Rate must be valid numbers.")
+            messagebox.showerror("Input Error", "Quantity, Rate, and GST must be valid numbers.")
 
     def _remove_item(self):
         """Removes the selected item from the Treeview and the items_data list."""
@@ -367,69 +405,76 @@ class InvoiceGeneratorApp:
         ws['A6'] = party_details['name']
         ws['A7'] = f"GST No.: {party_details['gst']}"
         ws['A8'] = f"Address: {party_details['address']}"
+        ws['A9'] = f"Phone: {party_details.get('phone', '')}"
+        ws['A10'] = f"Email: {party_details.get('email', '')}"
 
         # --- Date Details ---
-        ws['F5'] = "INVOICE DATE:"
-        ws['F5'].font = header_font
-        ws['G5'] = invoice_details['sale_date']
-        ws['F6'] = "DELIVERY DATE:"
-        ws['F6'].font = header_font
-        ws['G6'] = invoice_details['delivery_date']
+        ws['H5'] = "INVOICE DATE:"
+        ws['H5'].font = header_font
+        ws['I5'] = invoice_details['sale_date']
+        ws['H6'] = "DELIVERY DATE:"
+        ws['H6'].font = header_font
+        ws['I6'] = invoice_details['delivery_date']
         
         # --- Table Headers (Row 10) ---
-        headers = ["#", "Description of Goods", "Quantity", "Rate (Incl. Tax)", "Total Amount"]
-        ws.merge_cells('B10:C10') 
-        
+        headers = ["#", "Description of Goods", "Quantity", "Rate", "GST %", "Total (Incl. Tax)"]
+        ws.merge_cells('B12:C12')
+
         col_start = 1
         for i, header in enumerate(headers):
             col = col_start + i
-            # Handle the merged column for Description
             cell = ws.cell(row=10, column=col)
             cell.value = header
             cell.font = header_font
             cell.fill = fill_header
             cell.border = border
             if header == "Description of Goods":
-                 col_start += 1 
+                col_start += 1
 
         # --- Table Data ---
-        row = 11
+        row = 13
         total_invoice_amount = 0
-        
+
         for i, item in enumerate(items):
-            
             ws[f'A{row}'] = i + 1
             ws[f'B{row}'] = item['description']
-            ws.merge_cells(f'B{row}:C{row}') 
+            ws.merge_cells(f'B{row}:C{row}')
             ws[f'D{row}'] = item['quantity']
             ws[f'E{row}'] = item['rate']
-            ws[f'F{row}'] = item['total'] 
-            
+            ws[f'F{row}'] = item['gst']
+            # Calculate GST and total
+            gst_amount = item['total'] * item['gst'] / 100.0
+            total_with_gst = item['total'] + gst_amount
+            ws[f'G{row}'] = total_with_gst
+
             # Formatting and border
-            for col_idx in range(1, 7):
-                 cell = ws.cell(row=row, column=col_idx)
-                 cell.border = border
-                 if col_idx >= 4: 
-                     cell.alignment = Alignment(horizontal='right')
-            
-            total_invoice_amount += item['total']
+            for col_idx in range(1, 8):
+                cell = ws.cell(row=row, column=col_idx)
+                cell.border = border
+                if col_idx >= 4:
+                    cell.alignment = Alignment(horizontal='right')
+
+            total_invoice_amount += total_with_gst
             row += 1
 
         # --- Summary & Totals ---
-        ws.merge_cells(start_row=row + 1, start_column=4, end_row=row + 1, end_column=5)
-        ws[f'D{row + 1}'] = "TOTAL (Incl. Tax):"
-        ws[f'D{row + 1}'].font = header_font
-        ws[f'F{row + 1}'] = total_invoice_amount
-        ws[f'F{row + 1}'].font = header_font
-        ws[f'F{row + 1}'].alignment = Alignment(horizontal='right')
-        
+        ws.merge_cells(start_row=row + 1, start_column=5, end_row=row + 1, end_column=6)
+        ws[f'E{row + 1}'] = "TOTAL (Incl. Tax):"
+        ws[f'E{row + 1}'].font = header_font
+        ws[f'G{row + 1}'] = total_invoice_amount
+        ws[f'G{row + 1}'].font = header_font
+        ws[f'G{row + 1}'].alignment = Alignment(horizontal='right')
+
         # --- Column Widths for readability ---
-        ws.column_dimensions['A'].width = 5 
-        ws.column_dimensions['B'].width = 25 
-        ws.column_dimensions['C'].width = 1 
-        ws.column_dimensions['D'].width = 12 
-        ws.column_dimensions['E'].width = 15 
-        ws.column_dimensions['F'].width = 15 
+        ws.column_dimensions['A'].width = 5
+        ws.column_dimensions['B'].width = 25
+        ws.column_dimensions['C'].width = 1
+        ws.column_dimensions['D'].width = 12
+        ws.column_dimensions['E'].width = 15
+        ws.column_dimensions['F'].width = 10
+        ws.column_dimensions['G'].width = 15
+        ws.column_dimensions['H'].width = 18
+        ws.column_dimensions['I'].width = 18
 
         # --- Save the file ---
         # Ensure the filename is safe and unique
