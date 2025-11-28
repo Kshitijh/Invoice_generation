@@ -213,7 +213,7 @@ class InvoiceGeneratorApp:
         self.item_entries["quantity"] = qty_entry
 
         # Rate
-        ttk.Label(entry_frame, text="Rate (Incl. Tax)").grid(row=0, column=4, padx=5, sticky="ew")
+        ttk.Label(entry_frame, text="Rate").grid(row=0, column=4, padx=5, sticky="ew")
         rate_entry = ttk.Entry(entry_frame)
         rate_entry.grid(row=0, column=5, padx=5, sticky="ew")
         rate_entry.bind("<Return>", lambda event: self._add_item())
@@ -235,7 +235,7 @@ class InvoiceGeneratorApp:
         self.tree.column("Description", width=200, anchor="w")
         self.tree.heading("Qty", text="Quantity")
         self.tree.column("Qty", width=80, anchor="center")
-        self.tree.heading("Rate", text="Rate (Incl. Tax)")
+        self.tree.heading("Rate", text="Rate")
         self.tree.column("Rate", width=100, anchor="e")
         self.tree.heading("GST%", text="GST %")
         self.tree.column("GST%", width=80, anchor="center")
@@ -248,7 +248,7 @@ class InvoiceGeneratorApp:
         buttons_frame.pack(pady=5, anchor="e")
         
         ttk.Button(buttons_frame, text="Remove Selected Item", command=self._remove_item).pack(side="left", padx=5)
-        ttk.Button(buttons_frame, text="Generate Tax Invoice (Excel)", command=self._generate_invoice).pack(side="left", padx=5)
+        ttk.Button(buttons_frame, text="Generate Invoice (Excel)", command=self._generate_invoice).pack(side="left", padx=5)
         
     def _add_item(self):
         """Validates input and adds an item to the items_data list and Treeview."""
@@ -402,24 +402,22 @@ class InvoiceGeneratorApp:
         # --- Buyer Details ---
         ws['A5'] = "BILL TO:"
         ws['A5'].font = header_font
-        ws['A6'] = party_details['name']
+        ws['A6'] = f"Party Name: {party_details['name']}"
         ws['A7'] = f"GST No.: {party_details['gst']}"
         ws['A8'] = f"Address: {party_details['address']}"
         ws['A9'] = f"Phone: {party_details.get('phone', '')}"
         ws['A10'] = f"Email: {party_details.get('email', '')}"
 
         # --- Date Details ---
-        ws['G5'] = "INVOICE DATE:"
-        ws['G5'].font = header_font
-        ws['H5'] = invoice_details['sale_date']
-        ws['G6'] = "DELIVERY DATE:"
-        ws['G6'].font = header_font
-        ws['H6'] = invoice_details['delivery_date']
+        ws['E5'] = "INVOICE DATE:"
+        ws['E5'].font = header_font
+        ws['F5'] = invoice_details['sale_date']
+        ws['E6'] = "DELIVERY DATE:"
+        ws['E6'].font = header_font
+        ws['F6'] = invoice_details['delivery_date']
         
         # --- Table Headers (Row 10) ---
-        headers = ["#", "Description of Goods", "Quantity", "Rate", "GST %", "Total (Incl. Tax)"]
-        ws.merge_cells('B12:C12')
-
+        headers = ["Sr.", "Description of Goods", "Quantity", "Rate", "GST %", "Total (Incl. Tax)"]
         col_start = 1
         for i, header in enumerate(headers):
             col = col_start + i
@@ -428,9 +426,7 @@ class InvoiceGeneratorApp:
             cell.font = header_font
             cell.fill = fill_header
             cell.border = border
-            if header == "Description of Goods":
-                col_start += 1
-
+   
         # --- Table Data ---
         row = 11
         total_invoice_amount = 0
@@ -438,14 +434,14 @@ class InvoiceGeneratorApp:
         for i, item in enumerate(items):
             ws[f'A{row}'] = i + 1
             ws[f'B{row}'] = item['description']
-            ws.merge_cells(f'B{row}:C{row}')
-            ws[f'D{row}'] = item['quantity']
-            ws[f'E{row}'] = item['rate']
-            ws[f'F{row}'] = item['gst']
+            ws[f'C{row}'] = item['quantity']
+            ws[f'D{row}'] = item['rate']
+            ws[f'E{row}'] = item['gst']
+            ws[f'F{row}'] = item['total']
             # Calculate GST and total
             gst_amount = item['total'] * item['gst'] / 100.0
             total_with_gst = item['total'] + gst_amount
-            ws[f'G{row}'] = total_with_gst
+            ws[f'F{row}'] = total_with_gst
 
             # Formatting and border
             for col_idx in range(1, 8):
@@ -458,21 +454,20 @@ class InvoiceGeneratorApp:
             row += 1
 
         # --- Summary & Totals ---
-        ws.merge_cells(start_row=row + 1, start_column=5, end_row=row + 1, end_column=6)
         ws[f'E{row + 1}'] = "TOTAL (Incl. Tax):"
         ws[f'E{row + 1}'].font = header_font
-        ws[f'G{row + 1}'] = total_invoice_amount
-        ws[f'G{row + 1}'].font = header_font
-        ws[f'G{row + 1}'].alignment = Alignment(horizontal='right')
+        ws[f'F{row + 1}'] = total_invoice_amount
+        ws[f'F{row + 1}'].font = header_font
+        ws[f'F{row + 1}'].alignment = Alignment(horizontal='right')
 
         # --- Column Widths for readability ---
         ws.column_dimensions['A'].width = 5
         ws.column_dimensions['B'].width = 30
-        ws.column_dimensions['C'].width = 0
+        ws.column_dimensions['C'].width = 12
         ws.column_dimensions['D'].width = 12
-        ws.column_dimensions['E'].width = 15
-        ws.column_dimensions['F'].width = 12
-        ws.column_dimensions['G'].width = 18
+        ws.column_dimensions['E'].width = 16
+        ws.column_dimensions['F'].width = 14
+        ws.column_dimensions['G'].width = 15
 
         # --- Save the file ---
         # Ensure the filename is safe and unique
