@@ -396,39 +396,40 @@ class InvoiceGeneratorApp:
         # --- Invoice Header (Your Company Details) ---
         ws['A1'] = "Anant Enterprises"
         ws['A1'].font = heading_font
-        ws['A2'] = "18/560, New industrial estate, Ichalkaranji Opp. ASC College, Kolhapur, Maharashtra, 416115"
-        ws['A3'] = "GSTIN: 27FQLPP6106G1ZK"
+        ws['A2'] = "18/560, New industrial estate"
+        ws['A3'] = "Ichalkaranji Opp. ASC College, Kolhapur, Maharashtra, 416115"
+        ws['A4'] = "GSTIN: 27FQLPP6106G1ZK"
         
         # --- Buyer Details ---
-        ws['A5'] = "BILL TO:"
-        ws['A5'].font = header_font
-        ws['A6'] = f"Party Name: {party_details['name']}"
-        ws['A7'] = f"GST No.: {party_details['gst']}"
-        ws['A8'] = f"Address: {party_details['address']}"
-        ws['A9'] = f"Phone: {party_details.get('phone', '')}"
-        ws['A10'] = f"Email: {party_details.get('email', '')}"
-
+        ws['A6'] = "BILL TO:"
+        ws['A6'].font = header_font
+        ws['A7'] = f"Party Name: {party_details['name']}"
+        ws['A8'] = f"GST No.: {party_details['gst']}"
+        ws['A9'] = f"Address: {party_details['address']}"
+        ws['C7'] = f"Phone: {party_details.get('phone', '')}"
+        ws['C8'] = f"Email: {party_details.get('email', '')}"
+        
         # --- Date Details ---
-        ws['E5'] = "INVOICE DATE:"
-        ws['E5'].font = header_font
-        ws['F5'] = invoice_details['sale_date']
-        ws['E6'] = "DELIVERY DATE:"
+        ws['E6'] = "INVOICE DATE:"
         ws['E6'].font = header_font
-        ws['F6'] = invoice_details['delivery_date']
+        ws['F6'] = invoice_details['sale_date']
+        ws['E7'] = "DELIVERY DATE:"
+        ws['E7'].font = header_font
+        ws['F7'] = invoice_details['delivery_date']
         
         # --- Table Headers (Row 10) ---
         headers = ["Sr.", "Description of Goods", "Quantity", "Rate", "GST %", "Total (Incl. Tax)"]
         col_start = 1
         for i, header in enumerate(headers):
             col = col_start + i
-            cell = ws.cell(row=10, column=col)
+            cell = ws.cell(row=11, column=col)
             cell.value = header
             cell.font = header_font
             cell.fill = fill_header
             cell.border = border
    
         # --- Table Data ---
-        row = 11
+        row = 12
         total_invoice_amount = 0
 
         for i, item in enumerate(items):
