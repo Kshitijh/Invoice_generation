@@ -12,7 +12,7 @@ def load_customers_from_excel(file_path="customer_data.xlsx"):
     customers = {}
     try:
         if not os.path.exists(file_path):
-            messagebox.showwarning("customer_data.xlsx Not Found, Create a new file named customer_data.xlsx", 
+            messagebox.showwarning("customer_data.xlsx Not Found, Creating a new file named customer_data.xlsx", 
                 f"Customer database file '{file_path}' not found.\nUsing empty customer list.")
             return customers
             
