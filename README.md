@@ -64,6 +64,9 @@ pip install -r requitements.txt
 **Required packages:**
 - `openpyxl` - For Excel file generation and formatting
 - `tkcalendar` - For calendar date picker widget
+- `tkinter` - For GUI design
+- `pillow` - For image insertion
+- `pyinstaller` - For converting the project into an Executable file
 
 ### Step 4: Verify Installation
 
