@@ -448,8 +448,12 @@ class InvoiceGeneratorApp:
 
         for i, item in enumerate(items):
             ws[f'A{row}'] = i + 1
+            cell = ws[f'A{row}']
+            cell.alignment = Alignment(horizontal='center', vertical='center') # Center align serial number
             ws[f'B{row}'] = item['description']
             ws[f'C{row}'] = item['quantity']
+            cell = ws[f'C{row}']
+            cell.alignment = Alignment(horizontal='center', vertical='center') # Center align quantity
             ws[f'D{row}'] = item['rate']
             ws[f'E{row}'] = item['gst']
             ws[f'F{row}'] = item['total']
@@ -468,7 +472,7 @@ class InvoiceGeneratorApp:
                 cell = ws.cell(row=row, column=col_idx)
                 cell.border = border
                 if col_idx >= 4:
-                    cell.alignment = Alignment(horizontal='right')
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
 
             total_invoice_amount += total_with_gst
             row += 1
@@ -478,7 +482,7 @@ class InvoiceGeneratorApp:
         ws[f'E{row + 1}'].font = header_font
         ws[f'F{row + 1}'] = total_invoice_amount
         ws[f'F{row + 1}'].font = header_font
-        ws[f'F{row + 1}'].alignment = Alignment(horizontal='right')
+        ws[f'F{row + 1}'].alignment = Alignment(horizontal='center', vertical='center')
 
         # --- Column Widths for readability ---
         ws.column_dimensions['A'].width = 5
