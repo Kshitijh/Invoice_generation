@@ -441,7 +441,7 @@ class InvoiceGeneratorApp:
             cell.font = header_font
             cell.fill = fill_header
             cell.border = border
-   
+        
         # --- Table Data ---
         row = 12
         total_invoice_amount = 0
@@ -453,6 +453,14 @@ class InvoiceGeneratorApp:
             ws[f'D{row}'] = item['rate']
             ws[f'E{row}'] = item['gst']
             ws[f'F{row}'] = item['total']
+
+            # Set wrap text for description cell
+            desc_cell = ws[f'B{row}']
+            desc_cell.alignment = Alignment(wrap_text=True)
+            # Set wrap text for description cell
+            desc_cell = ws[f'C{row}']
+            desc_cell.alignment = Alignment(wrap_text=True)
+
             # Calculate GST and total
             gst_amount = item['total'] * item['gst'] / 100.0
             total_with_gst = item['total'] + gst_amount
