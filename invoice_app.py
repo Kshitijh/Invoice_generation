@@ -399,6 +399,20 @@ class InvoiceGeneratorApp:
         ws['A2'] = "18/560, New industrial estate"
         ws['A3'] = "Ichalkaranji Opp. ASC College, Kolhapur, Maharashtra, 416115"
         ws['A4'] = "GSTIN: 27FQLPP6106G1ZK"
+
+        # --- Merge cells for logo ---
+        ws.merge_cells('E2:F2')
+        ws.merge_cells('E3:F3')
+
+        # --- Insert logo image ---
+        logo_path = os.path.join(os.getcwd(), "logo.jpg")
+        if os.path.exists(logo_path):
+            from openpyxl.drawing.image import Image as XLImage
+            img = XLImage(logo_path)
+            # Resize the image to fit the merged cells (approximate)
+            img.width = 180  # pixels
+            img.height = 80  # pixels
+            ws.add_image(img, 'E2')
         
         # --- Buyer Details ---
         ws['A6'] = "BILL TO:"
