@@ -524,6 +524,16 @@ class InvoiceGeneratorApp:
         ws[f'H{row + 2}'].font = header_font
         ws[f'H{row + 2}'].alignment = Alignment(horizontal='center', vertical='center')
 
+        # --- Signature Section ---
+        signature_start_row = row + 5
+        ws[f'G{signature_start_row}'] = "For Anant Enterprises"
+        ws[f'G{signature_start_row}'].font = header_font
+        
+        # Add Authority Signatory after some space
+        signatory_row = signature_start_row + 4
+        ws[f'G{signatory_row}'] = "Authority Signatory"
+        ws[f'G{signatory_row}'].font = header_font
+
         # --- Column Widths for readability ---
         ws.column_dimensions['A'].width = 5
         ws.column_dimensions['B'].width = 13
