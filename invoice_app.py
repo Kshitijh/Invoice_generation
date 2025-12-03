@@ -436,7 +436,7 @@ class InvoiceGeneratorApp:
             from openpyxl.drawing.image import Image as XLImage
             img = XLImage(logo_path)
             # Resize the image to fit the merged cells (approximate)
-            img.width = 220  # pixels
+            img.width = 250  # pixels
             img.height = 80  # pixels
             ws.add_image(img, 'E1')
         
