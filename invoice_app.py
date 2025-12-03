@@ -433,7 +433,7 @@ class InvoiceGeneratorApp:
             from openpyxl.drawing.image import Image as XLImage
             img = XLImage(logo_path)
             # Resize the image to fit the merged cells (approximate)
-            img.width = 180  # pixels
+            img.width = 200  # pixels
             img.height = 80  # pixels
             ws.add_image(img, 'E1')
         
@@ -447,12 +447,12 @@ class InvoiceGeneratorApp:
         ws['A11'] = f"Email: {party_details.get('email', '')}"
         
         # --- Date Details ---
-        ws['F6'] = "INVOICE DATE:"
-        ws['F6'].font = header_font
-        ws['G6'] = invoice_details['sale_date']
-        ws['F7'] = "DELIVERY DATE:"
-        ws['F7'].font = header_font
-        ws['G7'] = invoice_details['delivery_date']
+        ws['G6'] = "INVOICE DATE:"
+        ws['G6'].font = header_font
+        ws['H6'] = invoice_details['sale_date']
+        ws['G7'] = "DELIVERY DATE:"
+        ws['G7'].font = header_font
+        ws['H7'] = invoice_details['delivery_date']
         
         # --- Table Headers (Row 12) ---
         headers = ["Sr.", "HSN/SAC Code", "Description of Goods", "Quantity", "Rate", "CGST", "SGST", "Total (Incl. Tax)"]
@@ -474,6 +474,9 @@ class InvoiceGeneratorApp:
             cell = ws[f'A{row}']
             cell.alignment = Alignment(horizontal='center', vertical='center') # Center align serial number
             ws[f'B{row}'] = item['hsn']
+            # Apply center alignment and wrap text to HSN/SAC Code
+            hsn_cell = ws[f'B{row}']
+            hsn_cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
             ws[f'C{row}'] = item['description']
             ws[f'D{row}'] = item['quantity']
             cell = ws[f'C{row}']
@@ -482,15 +485,9 @@ class InvoiceGeneratorApp:
             ws[f'F{row}'] = item['gst']
             ws[f'G{row}'] = item['total']
 
-            # Set wrap text for description cell
+            # Set wrap text, center and middle alignment for description cell
             desc_cell = ws[f'C{row}']
-            desc_cell.alignment = Alignment(wrap_text=True)
-
-            '''
-            # Set wrap text for B collumn
-            desc_cell = ws[f'B{row}']
-            desc_cell.alignment = Alignment(wrap_text=True)
-            '''
+            desc_cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
             # Calculate GST and total
             gst_amount = item['total'] * item['gst'] / 100.0
@@ -521,8 +518,8 @@ class InvoiceGeneratorApp:
         ws.column_dimensions['D'].width = 10
         ws.column_dimensions['E'].width = 10
         ws.column_dimensions['F'].width = 10
-        ws.column_dimensions['G'].width = 10
-        ws.column_dimensions['H'].width = 14
+        ws.column_dimensions['G'].width = 15
+        ws.column_dimensions['H'].width = 13
 
         # --- Page Layout: Scale to Fit (1 page width) ---
         ws.page_setup.paperSize = ws.PAPERSIZE_LETTER
