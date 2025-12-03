@@ -276,21 +276,23 @@ class InvoiceGeneratorApp:
             description = self.item_entries["description"].get().strip()
             quantity = float(self.item_entries["quantity"].get())
             rate = float(self.item_entries["rate"].get())
-            gst = self.item_entries["gst"].get().strip()
-            gst_percent = float(gst) if gst else 0.0
+            cgst_rupees = float(self.item_entries["gst"].get()) if self.item_entries["gst"].get().strip() else 0.0
+            sgst_rupees = float(self.item_entries["sgst"].get()) if self.item_entries["sgst"].get().strip() else 0.0
 
-            if not description or quantity <= 0 or rate <= 0 or gst_percent < 0:
-                messagebox.showerror("Input Error", "All fields must be filled, and Quantity/Rate/GST must be valid positive numbers.")
+            if not description or quantity <= 0 or rate <= 0 or cgst_rupees < 0 or sgst_rupees < 0:
+                messagebox.showerror("Input Error", "All fields must be filled, and Quantity/Rate/CGST/SGST must be valid positive numbers.")
                 return
 
             total_amount = quantity * rate
+            total_with_tax = total_amount + cgst_rupees + sgst_rupees
 
             item = {
                 "hsn": hsn,
                 "description": description,
                 "quantity": quantity,
                 "rate": rate,
-                "gst": gst_percent,
+                "cgst_rupees": cgst_rupees,
+                "sgst_rupees": sgst_rupees,
                 "total": total_amount,
             }
             self.items_data.append(item)
@@ -301,8 +303,9 @@ class InvoiceGeneratorApp:
                 description,
                 f"{quantity:.2f}",
                 f"{rate:.2f}",
-                f"{gst_percent:.2f}",
-                f"{total_amount:.2f}"
+                f"{cgst_rupees:.2f}",
+                f"{sgst_rupees:.2f}",
+                f"{total_with_tax:.2f}"
             ))
 
             # Clear fields after adding
@@ -311,7 +314,7 @@ class InvoiceGeneratorApp:
             self.item_entries["description"].focus()
 
         except ValueError:
-            messagebox.showerror("Input Error", "Quantity, Rate, and GST must be valid numbers.")
+            messagebox.showerror("Input Error", "Quantity, Rate, CGST, and SGST must be valid numbers.")
 
     def _remove_item(self):
         """Removes the selected item from the Treeview and the items_data list."""
@@ -482,17 +485,16 @@ class InvoiceGeneratorApp:
             cell = ws[f'C{row}']
             cell.alignment = Alignment(horizontal='center', vertical='center') # Center align quantity
             ws[f'E{row}'] = item['rate']
-            ws[f'F{row}'] = item['gst']
-            ws[f'G{row}'] = item['total']
+            ws[f'F{row}'] = item['cgst_rupees']
+            ws[f'G{row}'] = item['sgst_rupees']
 
             # Set wrap text, center and middle alignment for description cell
             desc_cell = ws[f'C{row}']
             desc_cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
-            # Calculate GST and total
-            gst_amount = item['total'] * item['gst'] / 100.0
-            total_with_gst = item['total'] + gst_amount
-            ws[f'H{row}'] = total_with_gst
+            # Calculate total with CGST and SGST added directly (as rupees, not percentages)
+            total_with_tax = item['total'] + item['cgst_rupees'] + item['sgst_rupees']
+            ws[f'H{row}'] = total_with_tax
 
             # Formatting and border
             for col_idx in range(1, 9):
@@ -501,15 +503,26 @@ class InvoiceGeneratorApp:
                 if col_idx >= 4:
                     cell.alignment = Alignment(horizontal='center', vertical='center')
 
-            total_invoice_amount += total_with_gst
+            total_invoice_amount += total_with_tax
             row += 1
 
+        # --- Calculate Total GST ---
+        total_gst = sum(item['cgst_rupees'] + item['sgst_rupees'] for item in items)
+
         # --- Summary & Totals ---
-        ws[f'G{row + 1}'] = "TOTAL (Incl. Tax):"
+        # Total GST row
+        ws[f'G{row + 1}'] = "Total GST:"
         ws[f'G{row + 1}'].font = header_font
-        ws[f'H{row + 1}'] = total_invoice_amount
+        ws[f'H{row + 1}'] = total_gst
         ws[f'H{row + 1}'].font = header_font
         ws[f'H{row + 1}'].alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Total (Incl. Tax) row
+        ws[f'G{row + 2}'] = "TOTAL (Incl. Tax):"
+        ws[f'G{row + 2}'].font = header_font
+        ws[f'H{row + 2}'] = total_invoice_amount
+        ws[f'H{row + 2}'].font = header_font
+        ws[f'H{row + 2}'].alignment = Alignment(horizontal='center', vertical='center')
 
         # --- Column Widths for readability ---
         ws.column_dimensions['A'].width = 5
