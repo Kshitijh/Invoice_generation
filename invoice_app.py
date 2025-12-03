@@ -436,7 +436,7 @@ class InvoiceGeneratorApp:
             from openpyxl.drawing.image import Image as XLImage
             img = XLImage(logo_path)
             # Resize the image to fit the merged cells (approximate)
-            img.width = 200  # pixels
+            img.width = 220  # pixels
             img.height = 80  # pixels
             ws.add_image(img, 'E1')
         
@@ -527,11 +527,13 @@ class InvoiceGeneratorApp:
         # --- Signature Section ---
         signature_start_row = row + 5
         ws[f'G{signature_start_row}'] = "For Anant Enterprises"
+        ws[f'G{signature_start_row}'].alignment = Alignment(horizontal='center', vertical='center') 
         ws[f'G{signature_start_row}'].font = header_font
         
         # Add Authority Signatory after some space
         signatory_row = signature_start_row + 4
         ws[f'G{signatory_row}'] = "Authority Signatory"
+        desc_cell.alignment = Alignment(horizontal='center', vertical='center')
         ws[f'G{signatory_row}'].font = header_font
 
         # --- Column Widths for readability ---
