@@ -193,52 +193,71 @@ class InvoiceGeneratorApp:
         entry_frame.pack(fill="x", padx=5, pady=5)
 
         # Make columns responsive
-        for i in range(8):
+        for i in range(10):
             entry_frame.columnconfigure(i, weight=1)
-
         self.item_entries = {}
 
+        # HSN/SAC Code (Optional)
+        ttk.Label(entry_frame, text="HSN/SAC Code").grid(row=0, column=0, padx=5, sticky="ew")
+        hsn_entry = ttk.Entry(entry_frame)
+        hsn_entry.grid(row=0, column=1, padx=5, sticky="ew")
+        self.item_entries["hsn"] = hsn_entry
+
         # Description
-        ttk.Label(entry_frame, text="Description").grid(row=0, column=0, padx=5, sticky="ew")
+        ttk.Label(entry_frame, text="Description").grid(row=0, column=2, padx=5, sticky="ew")
         desc_entry = ttk.Entry(entry_frame)
-        desc_entry.grid(row=0, column=1, padx=5, sticky="ew")
+        desc_entry.grid(row=0, column=3, padx=5, sticky="ew")
         desc_entry.bind("<Return>", lambda event: self._add_item())
         self.item_entries["description"] = desc_entry
 
         # Quantity
-        ttk.Label(entry_frame, text="Quantity").grid(row=0, column=2, padx=5, sticky="ew")
+        ttk.Label(entry_frame, text="Quantity").grid(row=0, column=4, padx=5, sticky="ew")
         qty_entry = ttk.Entry(entry_frame)
-        qty_entry.grid(row=0, column=3, padx=5, sticky="ew")
+        qty_entry.grid(row=0, column=5, padx=5, sticky="ew")
         qty_entry.bind("<Return>", lambda event: self._add_item())
         self.item_entries["quantity"] = qty_entry
 
         # Rate
-        ttk.Label(entry_frame, text="Rate").grid(row=0, column=4, padx=5, sticky="ew")
+        ttk.Label(entry_frame, text="Rate").grid(row=0, column=6, padx=5, sticky="ew")
         rate_entry = ttk.Entry(entry_frame)
-        rate_entry.grid(row=0, column=5, padx=5, sticky="ew")
+        rate_entry.grid(row=0, column=7, padx=5, sticky="ew")
         rate_entry.bind("<Return>", lambda event: self._add_item())
         self.item_entries["rate"] = rate_entry
 
-        # GST (%)
-        ttk.Label(entry_frame, text="GST (%)").grid(row=0, column=6, padx=5, sticky="ew")
+        # CGST
+        ttk.Label(entry_frame, text="CGST").grid(row=0, column=8, padx=5, sticky="ew")
         gst_frame = ttk.Frame(entry_frame)
-        gst_frame.grid(row=0, column=7, padx=5, sticky="ew")
+        gst_frame.grid(row=0, column=9, padx=5, sticky="ew")
         gst_entry = ttk.Entry(gst_frame)
         gst_entry.pack(side="left", fill="x", expand=True)
         gst_entry.bind("<Return>", lambda event: self._add_item())
         self.item_entries["gst"] = gst_entry
-        ttk.Label(gst_frame, text="%").pack(side="left")
+        ttk.Label(gst_frame).pack(side="left")
+
+        # SGST
+        ttk.Label(entry_frame, text="SGST").grid(row=1, column=8, padx=5, sticky="ew")
+        sgst_frame = ttk.Frame(entry_frame)
+        sgst_frame.grid(row=1, column=9, padx=5, sticky="ew")
+        sgst_entry = ttk.Entry(sgst_frame)
+        sgst_entry.pack(side="left", fill="x", expand=True)
+        sgst_entry.bind("<Return>", lambda event: self._add_item())
+        self.item_entries["sgst"] = sgst_entry
+        ttk.Label(sgst_frame).pack(side="left")
 
         # 2. Treeview for displaying added items
-        self.tree = ttk.Treeview(frame, columns=("Description", "Qty", "Rate", "GST%", "Total"), show="headings", height=10)
+        self.tree = ttk.Treeview(frame, columns=("HSN/SAC","Description", "Qty", "Rate", "CGST", "SGST", "Total"), show="headings", height=10)
+        self.tree.heading("HSN/SAC", text="HSN/SAC Code")
+        self.tree.column("HSN/SAC", width=100, anchor="center")
         self.tree.heading("Description", text="Description")
         self.tree.column("Description", width=200, anchor="w")
         self.tree.heading("Qty", text="Quantity")
         self.tree.column("Qty", width=80, anchor="center")
         self.tree.heading("Rate", text="Rate")
         self.tree.column("Rate", width=100, anchor="e")
-        self.tree.heading("GST%", text="GST %")
-        self.tree.column("GST%", width=80, anchor="center")
+        self.tree.heading("CGST", text="CGST")
+        self.tree.column("CGST", width=80, anchor="center")
+        self.tree.heading("SGST", text="SGST")
+        self.tree.column("SGST", width=80, anchor="center")
         self.tree.heading("Total", text="Total Amount")
         self.tree.column("Total", width=120, anchor="e")
         self.tree.pack(fill="both", padx=5, pady=5, expand=True)
@@ -253,6 +272,7 @@ class InvoiceGeneratorApp:
     def _add_item(self):
         """Validates input and adds an item to the items_data list and Treeview."""
         try:
+            hsn = self.item_entries["hsn"].get().strip()
             description = self.item_entries["description"].get().strip()
             quantity = float(self.item_entries["quantity"].get())
             rate = float(self.item_entries["rate"].get())
@@ -266,6 +286,7 @@ class InvoiceGeneratorApp:
             total_amount = quantity * rate
 
             item = {
+                "hsn": hsn,
                 "description": description,
                 "quantity": quantity,
                 "rate": rate,
@@ -276,6 +297,7 @@ class InvoiceGeneratorApp:
 
             # Insert into Treeview
             self.tree.insert("", "end", values=(
+                hsn,
                 description,
                 f"{quantity:.2f}",
                 f"{rate:.2f}",
@@ -401,8 +423,9 @@ class InvoiceGeneratorApp:
         ws['A4'] = "GSTIN: 27FQLPP6106G1ZK"
 
         # --- Merge cells for logo ---
-        ws.merge_cells('E2:F2')
-        ws.merge_cells('E3:F3')
+        ws.merge_cells('E1:G1')
+        ws.merge_cells('E2:G2')
+        ws.merge_cells('E3:G3')
 
         # --- Insert logo image ---
         logo_path = os.path.join(os.getcwd(), "logo.jpg")
@@ -412,7 +435,7 @@ class InvoiceGeneratorApp:
             # Resize the image to fit the merged cells (approximate)
             img.width = 180  # pixels
             img.height = 80  # pixels
-            ws.add_image(img, 'E2')
+            ws.add_image(img, 'E1')
         
         # --- Buyer Details ---
         ws['A6'] = "BILL TO:"
@@ -420,55 +443,62 @@ class InvoiceGeneratorApp:
         ws['A7'] = f"Party Name: {party_details['name']}"
         ws['A8'] = f"GST No.: {party_details['gst']}"
         ws['A9'] = f"Address: {party_details['address']}"
-        ws['C7'] = f"Phone: {party_details.get('phone', '')}"
-        ws['C8'] = f"Email: {party_details.get('email', '')}"
+        ws['A10'] = f"Phone: {party_details.get('phone', '')}"
+        ws['A11'] = f"Email: {party_details.get('email', '')}"
         
         # --- Date Details ---
-        ws['E6'] = "INVOICE DATE:"
-        ws['E6'].font = header_font
-        ws['F6'] = invoice_details['sale_date']
-        ws['E7'] = "DELIVERY DATE:"
-        ws['E7'].font = header_font
-        ws['F7'] = invoice_details['delivery_date']
+        ws['F6'] = "INVOICE DATE:"
+        ws['F6'].font = header_font
+        ws['G6'] = invoice_details['sale_date']
+        ws['F7'] = "DELIVERY DATE:"
+        ws['F7'].font = header_font
+        ws['G7'] = invoice_details['delivery_date']
         
-        # --- Table Headers (Row 10) ---
-        headers = ["Sr.", "Description of Goods", "Quantity", "Rate", "GST %", "Total (Incl. Tax)"]
+        # --- Table Headers (Row 12) ---
+        headers = ["Sr.", "HSN/SAC Code", "Description of Goods", "Quantity", "Rate", "CGST", "SGST", "Total (Incl. Tax)"]
         col_start = 1
         for i, header in enumerate(headers):
             col = col_start + i
-            cell = ws.cell(row=11, column=col)
+            cell = ws.cell(row=13, column=col)
             cell.value = header
             cell.font = header_font
             cell.fill = fill_header
             cell.border = border
         
         # --- Table Data ---
-        row = 12
+        row = 14
         total_invoice_amount = 0
 
         for i, item in enumerate(items):
             ws[f'A{row}'] = i + 1
             cell = ws[f'A{row}']
             cell.alignment = Alignment(horizontal='center', vertical='center') # Center align serial number
-            ws[f'B{row}'] = item['description']
-            ws[f'C{row}'] = item['quantity']
+            ws[f'B{row}'] = item['hsn']
+            ws[f'C{row}'] = item['description']
+            ws[f'D{row}'] = item['quantity']
             cell = ws[f'C{row}']
             cell.alignment = Alignment(horizontal='center', vertical='center') # Center align quantity
-            ws[f'D{row}'] = item['rate']
-            ws[f'E{row}'] = item['gst']
-            ws[f'F{row}'] = item['total']
+            ws[f'E{row}'] = item['rate']
+            ws[f'F{row}'] = item['gst']
+            ws[f'G{row}'] = item['total']
 
             # Set wrap text for description cell
+            desc_cell = ws[f'C{row}']
+            desc_cell.alignment = Alignment(wrap_text=True)
+
+            '''
+            # Set wrap text for B collumn
             desc_cell = ws[f'B{row}']
             desc_cell.alignment = Alignment(wrap_text=True)
+            '''
 
             # Calculate GST and total
             gst_amount = item['total'] * item['gst'] / 100.0
             total_with_gst = item['total'] + gst_amount
-            ws[f'F{row}'] = total_with_gst
+            ws[f'H{row}'] = total_with_gst
 
             # Formatting and border
-            for col_idx in range(1, 8):
+            for col_idx in range(1, 9):
                 cell = ws.cell(row=row, column=col_idx)
                 cell.border = border
                 if col_idx >= 4:
@@ -478,20 +508,28 @@ class InvoiceGeneratorApp:
             row += 1
 
         # --- Summary & Totals ---
-        ws[f'E{row + 1}'] = "TOTAL (Incl. Tax):"
-        ws[f'E{row + 1}'].font = header_font
-        ws[f'F{row + 1}'] = total_invoice_amount
-        ws[f'F{row + 1}'].font = header_font
-        ws[f'F{row + 1}'].alignment = Alignment(horizontal='center', vertical='center')
+        ws[f'G{row + 1}'] = "TOTAL (Incl. Tax):"
+        ws[f'G{row + 1}'].font = header_font
+        ws[f'H{row + 1}'] = total_invoice_amount
+        ws[f'H{row + 1}'].font = header_font
+        ws[f'H{row + 1}'].alignment = Alignment(horizontal='center', vertical='center')
 
         # --- Column Widths for readability ---
         ws.column_dimensions['A'].width = 5
-        ws.column_dimensions['B'].width = 30
-        ws.column_dimensions['C'].width = 12
-        ws.column_dimensions['D'].width = 12
-        ws.column_dimensions['E'].width = 16
-        ws.column_dimensions['F'].width = 14
-        ws.column_dimensions['G'].width = 15
+        ws.column_dimensions['B'].width = 13
+        ws.column_dimensions['C'].width = 30
+        ws.column_dimensions['D'].width = 10
+        ws.column_dimensions['E'].width = 10
+        ws.column_dimensions['F'].width = 10
+        ws.column_dimensions['G'].width = 10
+        ws.column_dimensions['H'].width = 14
+
+        # --- Page Layout: Scale to Fit (1 page width) ---
+        ws.page_setup.paperSize = ws.PAPERSIZE_LETTER
+        ws.print_options.horizontalCentered = True
+        ws.page_setup.fitToPage = True
+        ws.page_setup.fitToHeight = 0
+        ws.page_setup.fitToWidth = 1
 
         # --- Save the file ---
         # Ensure the filename is safe and unique
