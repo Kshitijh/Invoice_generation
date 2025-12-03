@@ -97,6 +97,8 @@ class InvoiceGeneratorApp:
         self.master = master
         master.title("🧾 Tax Invoice Generator")
         master.geometry("800x700")
+        # Maximize the window
+        master.state('zoomed')
         
         # --- Data storage for Item details ---
         self.items_data = []
