@@ -227,7 +227,7 @@ class InvoiceGeneratorApp:
         self.item_entries["rate"] = rate_entry
 
         # CGST
-        ttk.Label(entry_frame, text="CGST").grid(row=0, column=8, padx=5, sticky="ew")
+        ttk.Label(entry_frame, text="CGST (%)").grid(row=0, column=8, padx=5, sticky="ew")
         gst_frame = ttk.Frame(entry_frame)
         gst_frame.grid(row=0, column=9, padx=5, sticky="ew")
         gst_entry = ttk.Entry(gst_frame)
@@ -237,7 +237,7 @@ class InvoiceGeneratorApp:
         ttk.Label(gst_frame).pack(side="left")
 
         # SGST
-        ttk.Label(entry_frame, text="SGST").grid(row=1, column=8, padx=5, sticky="ew")
+        ttk.Label(entry_frame, text="SGST (%)").grid(row=1, column=8, padx=5, sticky="ew")
         sgst_frame = ttk.Frame(entry_frame)
         sgst_frame.grid(row=1, column=9, padx=5, sticky="ew")
         sgst_entry = ttk.Entry(sgst_frame)
@@ -278,24 +278,36 @@ class InvoiceGeneratorApp:
             description = self.item_entries["description"].get().strip()
             quantity = float(self.item_entries["quantity"].get())
             rate = float(self.item_entries["rate"].get())
-            cgst_rupees = float(self.item_entries["gst"].get()) if self.item_entries["gst"].get().strip() else 0.0
-            sgst_rupees = float(self.item_entries["sgst"].get()) if self.item_entries["sgst"].get().strip() else 0.0
+            
+            # Parse CGST percentage
+            cgst_input = self.item_entries["gst"].get().strip()
+            cgst_percent = float(cgst_input.rstrip('%')) if cgst_input else 0.0
+            
+            # Parse SGST percentage
+            sgst_input = self.item_entries["sgst"].get().strip()
+            sgst_percent = float(sgst_input.rstrip('%')) if sgst_input else 0.0
 
-            if not description or quantity <= 0 or rate <= 0 or cgst_rupees < 0 or sgst_rupees < 0:
+            if not description or quantity <= 0 or rate <= 0 or cgst_percent < 0 or sgst_percent < 0:
                 messagebox.showerror("Input Error", "All fields must be filled, and Quantity/Rate/CGST/SGST must be valid positive numbers.")
                 return
 
-            total_amount = quantity * rate
-            total_with_tax = total_amount + cgst_rupees + sgst_rupees
+            # Calculate amounts: CGST and SGST are percentages of the rate
+            item_subtotal = quantity * rate
+            cgst_amount = (rate * cgst_percent) / 100.0
+            sgst_amount = (rate * sgst_percent) / 100.0
+            total_tax = cgst_amount + sgst_amount
+            total_with_tax = item_subtotal + total_tax
 
             item = {
                 "hsn": hsn,
                 "description": description,
                 "quantity": quantity,
                 "rate": rate,
-                "cgst_rupees": cgst_rupees,
-                "sgst_rupees": sgst_rupees,
-                "total": total_amount,
+                "cgst_percent": cgst_percent,
+                "sgst_percent": sgst_percent,
+                "cgst_amount": cgst_amount,
+                "sgst_amount": sgst_amount,
+                "total": item_subtotal,
             }
             self.items_data.append(item)
 
@@ -305,8 +317,8 @@ class InvoiceGeneratorApp:
                 description,
                 f"{quantity:.2f}",
                 f"{rate:.2f}",
-                f"{cgst_rupees:.2f}",
-                f"{sgst_rupees:.2f}",
+                f"{cgst_amount:.2f}",
+                f"{sgst_amount:.2f}",
                 f"{total_with_tax:.2f}"
             ))
 
@@ -316,7 +328,7 @@ class InvoiceGeneratorApp:
             self.item_entries["description"].focus()
 
         except ValueError:
-            messagebox.showerror("Input Error", "Quantity, Rate, CGST, and SGST must be valid numbers.")
+            messagebox.showerror("Input Error", "Quantity, Rate, CGST, and SGST must be valid numbers. Enter percentages like '18' or '18%'.")
 
     def _remove_item(self):
         """Removes the selected item from the Treeview and the items_data list."""
@@ -487,15 +499,16 @@ class InvoiceGeneratorApp:
             cell = ws[f'C{row}']
             cell.alignment = Alignment(horizontal='center', vertical='center') # Center align quantity
             ws[f'E{row}'] = item['rate']
-            ws[f'F{row}'] = item['cgst_rupees']
-            ws[f'G{row}'] = item['sgst_rupees']
+            # Display CGST and SGST as percentages with % symbol
+            ws[f'F{row}'] = f"{item['cgst_percent']:.2f}%"
+            ws[f'G{row}'] = f"{item['sgst_percent']:.2f}%"
 
             # Set wrap text, center and middle alignment for description cell
             desc_cell = ws[f'C{row}']
             desc_cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
-            # Calculate total with CGST and SGST added directly (as rupees, not percentages)
-            total_with_tax = item['total'] + item['cgst_rupees'] + item['sgst_rupees']
+            # Calculate total with CGST and SGST added
+            total_with_tax = item['total'] + item['cgst_amount'] + item['sgst_amount']
             ws[f'H{row}'] = total_with_tax
 
             # Formatting and border
@@ -509,7 +522,7 @@ class InvoiceGeneratorApp:
             row += 1
 
         # --- Calculate Total GST ---
-        total_gst = sum(item['cgst_rupees'] + item['sgst_rupees'] for item in items)
+        total_gst = sum(item['cgst_amount'] + item['sgst_amount'] for item in items)
 
         # --- Summary & Totals ---
         # Total GST row
