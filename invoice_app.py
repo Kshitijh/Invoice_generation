@@ -551,6 +551,15 @@ class InvoiceGeneratorApp:
         desc_cell.alignment = Alignment(horizontal='center', vertical='center')
         ws[f'G{signatory_row}'].font = header_font
 
+        #Add Bank Details
+        bank_details_row = signatory_row + 3
+        ws[f'A{bank_details_row}'] = "Bank Details:"
+        ws[f'A{bank_details_row}'].font = header_font
+        ws[f'A{bank_details_row + 1}'] = "A/C: ANANT ENTERPRISES"
+        ws[f'A{bank_details_row + 2}'] = "A/C No.: 50200104022360"
+        ws[f'A{bank_details_row + 3}'] = "IFSC Code: HDFC0007957"
+        ws[f'A{bank_details_row + 4}'] = "Branch: Ichalkaranji"
+        
         # --- Column Widths for readability ---
         ws.column_dimensions['A'].width = 5
         ws.column_dimensions['B'].width = 13
