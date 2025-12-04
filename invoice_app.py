@@ -540,19 +540,19 @@ class InvoiceGeneratorApp:
         ws[f'H{row + 2}'].alignment = Alignment(horizontal='center', vertical='center')
 
         # --- Signature Section ---
-        signature_start_row = row + 5
-        ws[f'G{signature_start_row}'] = "For Anant Enterprises"
-        ws[f'G{signature_start_row}'].alignment = Alignment(horizontal='center', vertical='center') 
-        ws[f'G{signature_start_row}'].font = header_font
+        signature_start_row = row + 1
+        ws[f'D{signature_start_row}'] = "For Anant Enterprises"
+        # ws[f'E{signature_start_row}'].alignment = Alignment(horizontal='center', vertical='center') 
+        ws[f'D{signature_start_row}'].font = header_font
         
         # Add Authority Signatory after some space
         signatory_row = signature_start_row + 4
-        ws[f'G{signatory_row}'] = "Authority Signatory"
-        desc_cell.alignment = Alignment(horizontal='center', vertical='center')
-        ws[f'G{signatory_row}'].font = header_font
+        ws[f'D{signatory_row}'] = "Authority Signatory"
+        # desc_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws[f'D{signatory_row}'].font = header_font
 
         #Add Bank Details
-        bank_details_row = signatory_row + 3
+        bank_details_row = row + 1
         ws[f'A{bank_details_row}'] = "Bank Details:"
         ws[f'A{bank_details_row}'].font = header_font
         ws[f'A{bank_details_row + 1}'] = "A/C: ANANT ENTERPRISES"
