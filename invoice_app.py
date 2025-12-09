@@ -291,10 +291,10 @@ class InvoiceGeneratorApp:
                 messagebox.showerror("Input Error", "All fields must be filled, and Quantity/Rate/CGST/SGST must be valid positive numbers.")
                 return
 
-            # Calculate amounts: CGST and SGST are percentages of the rate
+            # Calculate amounts: CGST and SGST are percentages of the item total (Quantity × Rate)
             item_subtotal = quantity * rate
-            cgst_amount = (rate * cgst_percent) / 100.0
-            sgst_amount = (rate * sgst_percent) / 100.0
+            cgst_amount = (item_subtotal * cgst_percent) / 100.0
+            sgst_amount = (item_subtotal * sgst_percent) / 100.0
             total_tax = cgst_amount + sgst_amount
             total_with_tax = item_subtotal + total_tax
 
