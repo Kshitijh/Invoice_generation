@@ -226,6 +226,13 @@ class InvoiceGeneratorApp:
         rate_entry.bind("<Return>", lambda event: self._add_item())
         self.item_entries["rate"] = rate_entry
 
+        # Discount (%)
+        ttk.Label(entry_frame, text="Discount").grid(row=1, column=6, padx=5, sticky="ew")
+        discount_entry = ttk.Entry(entry_frame)
+        discount_entry.grid(row=1, column=7, padx=5, sticky="ew")
+        discount_entry.bind("<Return>", lambda event: self._add_item())
+        self.item_entries["discount"] = discount_entry
+
         # CGST
         ttk.Label(entry_frame, text="CGST (%)").grid(row=0, column=8, padx=5, sticky="ew")
         gst_frame = ttk.Frame(entry_frame)
@@ -247,7 +254,7 @@ class InvoiceGeneratorApp:
         ttk.Label(sgst_frame).pack(side="left")
 
         # 2. Treeview for displaying added items
-        self.tree = ttk.Treeview(frame, columns=("HSN/SAC","Description", "Qty", "Rate", "CGST", "SGST", "Total"), show="headings", height=10)
+        self.tree = ttk.Treeview(frame, columns=("HSN/SAC","Description", "Qty", "Rate", "Discount", "CGST", "SGST", "Total"), show="headings", height=10)
         self.tree.heading("HSN/SAC", text="HSN/SAC Code")
         self.tree.column("HSN/SAC", width=100, anchor="center")
         self.tree.heading("Description", text="Description")
@@ -256,6 +263,8 @@ class InvoiceGeneratorApp:
         self.tree.column("Qty", width=80, anchor="center")
         self.tree.heading("Rate", text="Rate")
         self.tree.column("Rate", width=100, anchor="e")
+        self.tree.heading("Discount", text="Discount")
+        self.tree.column("Discount", width=80, anchor="center")
         self.tree.heading("CGST", text="CGST")
         self.tree.column("CGST", width=80, anchor="center")
         self.tree.heading("SGST", text="SGST")
@@ -279,6 +288,10 @@ class InvoiceGeneratorApp:
             quantity = float(self.item_entries["quantity"].get())
             rate = float(self.item_entries["rate"].get())
             
+            # Parse Discount percentage
+            discount_input = self.item_entries["discount"].get().strip()
+            discount_percent = float(discount_input.rstrip('%')) if discount_input else 0.0
+            
             # Parse CGST percentage
             cgst_input = self.item_entries["gst"].get().strip()
             cgst_percent = float(cgst_input.rstrip('%')) if cgst_input else 0.0
@@ -287,27 +300,31 @@ class InvoiceGeneratorApp:
             sgst_input = self.item_entries["sgst"].get().strip()
             sgst_percent = float(sgst_input.rstrip('%')) if sgst_input else 0.0
 
-            if not description or quantity <= 0 or rate <= 0 or cgst_percent < 0 or sgst_percent < 0:
-                messagebox.showerror("Input Error", "All fields must be filled, and Quantity/Rate/CGST/SGST must be valid positive numbers.")
+            if not description or quantity <= 0 or rate <= 0 or discount_percent < 0 or cgst_percent < 0 or sgst_percent < 0:
+                messagebox.showerror("Input Error", "All fields must be filled, and Quantity/Rate/Discount/CGST/SGST must be valid positive numbers.")
                 return
 
-            # Calculate amounts: CGST and SGST are percentages of the item total (Quantity × Rate)
+            # Calculate amounts
             item_subtotal = quantity * rate
-            cgst_amount = (item_subtotal * cgst_percent) / 100.0
-            sgst_amount = (item_subtotal * sgst_percent) / 100.0
+            discount_amount = (item_subtotal * discount_percent) / 100.0
+            subtotal_after_discount = item_subtotal - discount_amount
+            cgst_amount = (subtotal_after_discount * cgst_percent) / 100.0
+            sgst_amount = (subtotal_after_discount * sgst_percent) / 100.0
             total_tax = cgst_amount + sgst_amount
-            total_with_tax = item_subtotal + total_tax
+            total_with_tax = subtotal_after_discount + total_tax
 
             item = {
                 "hsn": hsn,
                 "description": description,
                 "quantity": quantity,
                 "rate": rate,
+                "discount_percent": discount_percent,
+                "discount_amount": discount_amount,
                 "cgst_percent": cgst_percent,
                 "sgst_percent": sgst_percent,
                 "cgst_amount": cgst_amount,
                 "sgst_amount": sgst_amount,
-                "total": item_subtotal,
+                "total": subtotal_after_discount,
             }
             self.items_data.append(item)
 
@@ -317,6 +334,7 @@ class InvoiceGeneratorApp:
                 description,
                 f"{quantity:.2f}",
                 f"{rate:.2f}",
+                f"{discount_percent:.2f}",
                 f"{cgst_amount:.2f}",
                 f"{sgst_amount:.2f}",
                 f"{total_with_tax:.2f}"
@@ -328,7 +346,7 @@ class InvoiceGeneratorApp:
             self.item_entries["description"].focus()
 
         except ValueError:
-            messagebox.showerror("Input Error", "Quantity, Rate, CGST, and SGST must be valid numbers. Enter percentages like '18' or '18%'.")
+            messagebox.showerror("Input Error", "Quantity, Rate, Discount, CGST, and SGST must be valid numbers. Enter percentages like '18' or '18%'.")
 
     def _remove_item(self):
         """Removes the selected item from the Treeview and the items_data list."""
@@ -472,7 +490,7 @@ class InvoiceGeneratorApp:
         ws['H7'] = invoice_details['delivery_date']
         
         # --- Table Headers (Row 12) ---
-        headers = ["Sr.", "HSN/SAC Code", "Description of Goods", "Quantity", "Rate", "CGST", "SGST", "Total (Incl. Tax)"]
+        headers = ["Sr.", "HSN/SAC Code", "Description of Goods", "Quantity", "Rate", "Discount", "CGST (%)", "SGST (%)", "Total (Incl. Tax)"]
         col_start = 1
         for i, header in enumerate(headers):
             col = col_start + i
@@ -499,20 +517,22 @@ class InvoiceGeneratorApp:
             cell = ws[f'C{row}']
             cell.alignment = Alignment(horizontal='center', vertical='center') # Center align quantity
             ws[f'E{row}'] = item['rate']
+            # Display Discount as percentage with % symbol
+            ws[f'F{row}'] = f"{item['discount_percent']:.2f}%"
             # Display CGST and SGST as percentages with % symbol
-            ws[f'F{row}'] = f"{item['cgst_percent']:.2f}%"
-            ws[f'G{row}'] = f"{item['sgst_percent']:.2f}%"
+            ws[f'G{row}'] = f"{item['cgst_percent']:.2f}%"
+            ws[f'H{row}'] = f"{item['sgst_percent']:.2f}%"
 
             # Set wrap text, center and middle alignment for description cell
             desc_cell = ws[f'C{row}']
             desc_cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
-            # Calculate total with CGST and SGST added
+            # Calculate total with discount and taxes
             total_with_tax = item['total'] + item['cgst_amount'] + item['sgst_amount']
-            ws[f'H{row}'] = total_with_tax
+            ws[f'I{row}'] = total_with_tax
 
             # Formatting and border
-            for col_idx in range(1, 9):
+            for col_idx in range(1, 10):
                 cell = ws.cell(row=row, column=col_idx)
                 cell.border = border
                 if col_idx >= 4:
@@ -526,18 +546,18 @@ class InvoiceGeneratorApp:
 
         # --- Summary & Totals ---
         # Total GST row
-        ws[f'G{row + 1}'] = "Total GST:"
-        ws[f'G{row + 1}'].font = header_font
-        ws[f'H{row + 1}'] = total_gst
+        ws[f'H{row + 1}'] = "Total GST:"
         ws[f'H{row + 1}'].font = header_font
-        ws[f'H{row + 1}'].alignment = Alignment(horizontal='center', vertical='center')
+        ws[f'I{row + 1}'] = total_gst
+        ws[f'I{row + 1}'].font = header_font
+        ws[f'I{row + 1}'].alignment = Alignment(horizontal='center', vertical='center')
         
         # Total (Incl. Tax) row
-        ws[f'G{row + 2}'] = "TOTAL (Incl. Tax):"
-        ws[f'G{row + 2}'].font = header_font
-        ws[f'H{row + 2}'] = total_invoice_amount
+        ws[f'H{row + 2}'] = "TOTAL (Incl. Tax):"
         ws[f'H{row + 2}'].font = header_font
-        ws[f'H{row + 2}'].alignment = Alignment(horizontal='center', vertical='center')
+        ws[f'I{row + 2}'] = total_invoice_amount
+        ws[f'I{row + 2}'].font = header_font
+        ws[f'I{row + 2}'].alignment = Alignment(horizontal='center', vertical='center')
 
         # --- Signature Section ---
         signature_start_row = row + 1
@@ -567,8 +587,9 @@ class InvoiceGeneratorApp:
         ws.column_dimensions['D'].width = 10
         ws.column_dimensions['E'].width = 10
         ws.column_dimensions['F'].width = 10
-        ws.column_dimensions['G'].width = 15
-        ws.column_dimensions['H'].width = 13
+        ws.column_dimensions['G'].width = 13
+        ws.column_dimensions['H'].width = 11
+        ws.column_dimensions['I'].width = 13
 
         # --- Page Layout: Scale to Fit (1 page width) ---
         ws.page_setup.paperSize = ws.PAPERSIZE_LETTER
