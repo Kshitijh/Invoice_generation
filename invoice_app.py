@@ -304,14 +304,13 @@ class InvoiceGeneratorApp:
                 messagebox.showerror("Input Error", "All fields must be filled, and Quantity/Rate/Discount/CGST/SGST must be valid positive numbers.")
                 return
 
-            # Calculate amounts
+            # Calculate amounts with new formula: Total = (Qty * Rate) + (CGST + SGST) - Discount
             item_subtotal = quantity * rate
-            discount_amount = (item_subtotal * discount_percent) / 100.0
-            subtotal_after_discount = item_subtotal - discount_amount
-            cgst_amount = (subtotal_after_discount * cgst_percent) / 100.0
-            sgst_amount = (subtotal_after_discount * sgst_percent) / 100.0
+            cgst_amount = (item_subtotal * cgst_percent) / 100.0
+            sgst_amount = (item_subtotal * sgst_percent) / 100.0
             total_tax = cgst_amount + sgst_amount
-            total_with_tax = subtotal_after_discount + total_tax
+            discount_amount = (item_subtotal * discount_percent) / 100.0
+            total_with_tax = item_subtotal + total_tax - discount_amount
 
             item = {
                 "hsn": hsn,
@@ -324,7 +323,7 @@ class InvoiceGeneratorApp:
                 "sgst_percent": sgst_percent,
                 "cgst_amount": cgst_amount,
                 "sgst_amount": sgst_amount,
-                "total": subtotal_after_discount,
+                "total": item_subtotal,
             }
             self.items_data.append(item)
 
@@ -490,7 +489,7 @@ class InvoiceGeneratorApp:
         ws['H7'] = invoice_details['delivery_date']
         
         # --- Table Headers (Row 12) ---
-        headers = ["Sr.", "HSN/SAC Code", "Description of Goods", "Quantity", "Rate", "Discount", "CGST (%)", "SGST (%)", "Total (Incl. Tax)"]
+        headers = ["Sr.", "HSN/SAC Code", "Description of Goods", "Quantity", "Rate", "Subtotal", "Discount (%)", "CGST (%)", "SGST (%)", "Total (Incl. Tax)"]
         col_start = 1
         for i, header in enumerate(headers):
             col = col_start + i
@@ -517,22 +516,24 @@ class InvoiceGeneratorApp:
             cell = ws[f'C{row}']
             cell.alignment = Alignment(horizontal='center', vertical='center') # Center align quantity
             ws[f'E{row}'] = item['rate']
-            # Display Discount as percentage with % symbol
-            ws[f'F{row}'] = f"{item['discount_percent']:.2f}%"
+            ws[f'F{row}'] = item['total']
+            # Display Discount as percentage with % symbol, or leave blank if no discount
+            if item['discount_percent'] > 0:
+                ws[f'G{row}'] = f"{item['discount_percent']:.2f}%"
             # Display CGST and SGST as percentages with % symbol
-            ws[f'G{row}'] = f"{item['cgst_percent']:.2f}%"
-            ws[f'H{row}'] = f"{item['sgst_percent']:.2f}%"
+            ws[f'H{row}'] = f"{item['cgst_percent']:.2f}%"
+            ws[f'I{row}'] = f"{item['sgst_percent']:.2f}%"
 
             # Set wrap text, center and middle alignment for description cell
             desc_cell = ws[f'C{row}']
             desc_cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
-            # Calculate total with discount and taxes
-            total_with_tax = item['total'] + item['cgst_amount'] + item['sgst_amount']
-            ws[f'I{row}'] = total_with_tax
+            # Calculate total with discount and taxes: Total = (Qty * Rate) + (CGST + SGST) - Discount
+            total_with_tax = item['total'] + item['cgst_amount'] + item['sgst_amount'] - item['discount_amount']
+            ws[f'J{row}'] = total_with_tax
 
             # Formatting and border
-            for col_idx in range(1, 10):
+            for col_idx in range(1, 11):
                 cell = ws.cell(row=row, column=col_idx)
                 cell.border = border
                 if col_idx >= 4:
@@ -546,18 +547,26 @@ class InvoiceGeneratorApp:
 
         # --- Summary & Totals ---
         # Total GST row
-        ws[f'H{row + 1}'] = "Total GST:"
+        ws[f'G{row + 1}'] = "Total GST:"
+        ws[f'G{row + 1}'].font = header_font
+        ws[f'H{row + 1}'] = total_gst
         ws[f'H{row + 1}'].font = header_font
-        ws[f'I{row + 1}'] = total_gst
-        ws[f'I{row + 1}'].font = header_font
-        ws[f'I{row + 1}'].alignment = Alignment(horizontal='center', vertical='center')
+        ws[f'H{row + 1}'].alignment = Alignment(horizontal='center', vertical='center')
         
-        # Total (Incl. Tax) row
-        ws[f'H{row + 2}'] = "TOTAL (Incl. Tax):"
+        # Total Discount row
+        total_discount = sum(item['discount_amount'] for item in items)
+        ws[f'G{row + 2}'] = "Total Discount:"
+        ws[f'G{row + 2}'].font = header_font
+        ws[f'H{row + 2}'] = total_discount
         ws[f'H{row + 2}'].font = header_font
-        ws[f'I{row + 2}'] = total_invoice_amount
-        ws[f'I{row + 2}'].font = header_font
-        ws[f'I{row + 2}'].alignment = Alignment(horizontal='center', vertical='center')
+        ws[f'H{row + 2}'].alignment = Alignment(horizontal='center', vertical='center')
+
+        # Total (Incl. Tax) row
+        ws[f'G{row + 3}'] = "TOTAL (Incl. Tax):"
+        ws[f'G{row + 3}'].font = header_font
+        ws[f'H{row + 3}'] = total_invoice_amount
+        ws[f'H{row + 3}'].font = header_font
+        ws[f'H{row + 3}'].alignment = Alignment(horizontal='center', vertical='center')
 
         # --- Signature Section ---
         signature_start_row = row + 1
@@ -586,10 +595,11 @@ class InvoiceGeneratorApp:
         ws.column_dimensions['C'].width = 30
         ws.column_dimensions['D'].width = 10
         ws.column_dimensions['E'].width = 10
-        ws.column_dimensions['F'].width = 10
-        ws.column_dimensions['G'].width = 13
-        ws.column_dimensions['H'].width = 11
+        ws.column_dimensions['F'].width = 9
+        ws.column_dimensions['G'].width = 15
+        ws.column_dimensions['H'].width = 13
         ws.column_dimensions['I'].width = 13
+        ws.column_dimensions['J'].width = 15
 
         # --- Page Layout: Scale to Fit (1 page width) ---
         ws.page_setup.paperSize = ws.PAPERSIZE_LETTER
