@@ -354,17 +354,6 @@ Invoice/
 #### 1. **SAVED_PARTIES Dictionary**
 Located at the top of `invoice_app.py`, stores frequently used buyer information:
 
-```python
-SAVED_PARTIES = {
-    "Koustubh Enterprise": {
-        "name": "Koustubh's Solars Pvt. Ltd.",
-        "gst": "27AABBCC1234Z5",
-        "address": "Ichalkaranji, Maharashtra",
-    },
-    # Add more parties here
-}
-```
-
 #### 2. **InvoiceGeneratorApp Class**
 Main application class containing:
 - `_setup_buyer_details_frame()`: Creates buyer information section
